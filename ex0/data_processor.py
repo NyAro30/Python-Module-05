@@ -7,7 +7,7 @@
 #   By: mny-aro- <mny-aro-@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/07/27 23:05:09 by mny-aro-            #+#    #+#            #
-#   Updated: 2026/07/27 23:05:12 by mny-aro-           ###   ########.fr      #
+#   Updated: 2026/07/28 01:07:12 by mny-aro-           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -103,6 +103,19 @@ class LogProcessor(DataProcessor):
             return is_valid_dict(data)
         else:
             return False
+
+    def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
+        if not self.validate(data):
+            raise ValueError("Improper log data")
+        if isinstance(data, list):
+            for item in data:
+                rank = self.count_rank()
+                value = f"{item['log_level']}: {item['log_message']}"
+                self.data.append((rank, value))
+        elif isinstance(data, dict):
+            rank = self.count_rank()
+            value = f"{data['log_level']}: {data['log_message']}"
+            self.data.append((rank, value))
 
 
 def main() -> None:
