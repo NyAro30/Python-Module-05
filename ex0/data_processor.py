@@ -6,8 +6,8 @@
 #                                                      +:+ +:+         +:+    #
 #   By: mny-aro- <mny-aro-@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
-#   Created: 2026/07/26 01:13:25 by mny-aro-            #+#    #+#            #
-#   Updated: 2026/07/27 22:03:33 by mny-aro-           ###   ########.fr      #
+#   Created: 2026/07/27 23:05:09 by mny-aro-            #+#    #+#            #
+#   Updated: 2026/07/27 23:05:12 by mny-aro-           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -87,19 +87,22 @@ class TextProcessor(DataProcessor):
 
 class LogProcessor(DataProcessor):
     def validate(self, data: typing.Any) -> bool:
-        if not isinstance(data, dict):
-            return False
-        if isinstance(data, dict):
-            keys_ok = all(isinstance(k, str) for k in data.keys())
-            values_ok = all(isinstance(v, str) for v in data.values())
+        def is_valid_dict(d: typing.Any) -> bool:
+            if not isinstance(d, dict):
+                return False
+            keys_ok = all(isinstance(k, str)
+                          for k in d.keys())
+            values_ok = all(isinstance(v, str)
+                          for v in d.values())
             return keys_ok and values_ok
-        elif isinstance(data, list) and all(isinstance(item, dict)
-                        for item in data):
-            return True
+
+        if isinstance(data, list):
+            return all(is_valid_dict(item)
+                       for item in data)
+        elif isinstance(data,dict):
+            return is_valid_dict(data)
         else:
             return False
-
-        
 
 
 def main() -> None:
