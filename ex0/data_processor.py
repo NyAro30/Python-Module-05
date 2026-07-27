@@ -7,7 +7,7 @@
 #   By: mny-aro- <mny-aro-@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/07/27 23:05:09 by mny-aro-            #+#    #+#            #
-#   Updated: 2026/07/28 01:07:12 by mny-aro-           ###   ########.fr      #
+#   Updated: 2026/07/28 02:18:15 by mny-aro-           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -65,9 +65,9 @@ class NumericProcessor(DataProcessor):
 class TextProcessor(DataProcessor):
     def validate(self, data: typing.Any) -> bool:
         if isinstance(data, list):
-            is_int = all(isinstance(element, str)
+            is_str_list = all(isinstance(element, str)
                 for element in data)
-            return is_int
+            return is_str_list
         elif isinstance(data, str):
             return True
         else:
@@ -104,22 +104,96 @@ class LogProcessor(DataProcessor):
         else:
             return False
 
-    def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
+    def ingest(self, data: dict[str, str]
+               | list[dict[str, str]]) -> None:
         if not self.validate(data):
             raise ValueError("Improper log data")
         if isinstance(data, list):
             for item in data:
                 rank = self.count_rank()
-                value = f"{item['log_level']}: {item['log_message']}"
+                value = (f"{item['log_level']}:"
+                         f" {item['log_message']}")
                 self.data.append((rank, value))
         elif isinstance(data, dict):
             rank = self.count_rank()
-            value = f"{data['log_level']}: {data['log_message']}"
+            value = (f"{data['log_level']}:"
+                     f" {data['log_message']}")
             self.data.append((rank, value))
 
 
 def main() -> None:
-    pass
+    print("=== Code Nexus - Data Processor ===")
+    numeric = NumericProcessor()
+    text = TextProcessor()
+    log = LogProcessor()
+
+    print("\nTesting Numeric Processor...")
+    nbr = [42, "Hello"]
+    for test in nbr:
+        print(f" Trying to validate input '{test}':"
+              f" {numeric.validate(test)}")
+    print(" Test invalid ingestion of string 'foo'"
+          " without prior validation:")
+    try:
+        numeric.ingest("foo")
+    except Exception as err:
+        print(f" Got exception: {err}")
+    valid_list = [1, 2, 3, 4, 5]
+    print(f" Processing data: {valid_list}")
+    numeric.ingest(valid_list)
+    to_extract1 = 3
+    if to_extract1 == 1:
+        print(f" Exctracting {to_extract1} value...")
+    else:
+        print(f" Exctracting {to_extract1} values...")
+    for _ in range(to_extract1):
+        rank, value = numeric.output()
+        print(f" Numeric value {rank}: {value}")
+
+
+    print("\nTesting Text Processor...")
+    new_list = [42, ['Hello', 'Nexus', 'World']]
+    print(f" Trying to validate input '{nbr[0]}':"
+          f"{text.validate(new_list[0])}")
+    print(f" Processing data: {new_list[1]}")
+    text.ingest(new_list[1])
+    to_extract2 = 1
+    if to_extract2 == 1:
+        print(f" Exctracting {to_extract2} value...")
+    else:
+        print(f" Exctracting {to_extract2} values...")
+    for _ in range(to_extract2):
+        rank, value = text.output()
+        print(f" Text value {rank}: {value}")
+
+
+    print("\nTesting Log Processor...")
+    print(f" Trying to validate input 'Hello':"
+          f" {log.validate('Hello')}")
+    print(" Processing data: [{'log_level': 'NOTICE',"
+          " 'log_message': 'Connection to server'},"
+          " {'log_level': 'ERROR    "
+          "      '. 'log_message': "
+          "'Unauthorized access!!'}]")
+    log.ingest([
+        {
+            "log_level": "NOTICE",
+            "log_message": "Connection to server",
+        },
+        {
+            "log_level": "ERROR",
+            "log_message": "Unauthorized access!!",
+        },
+    ])
+    to_extract3 = 2
+    if to_extract3 == 1:
+        print(f" Extracting {to_extract3} value...")
+    else:
+        print(f" Extracting {to_extract3} values...")
+    for _ in range(to_extract3):
+        rank, value = log.output()
+        print(f" Log entry {rank}: {value}")
+
 
 if __name__ == "__main__":
     main()
