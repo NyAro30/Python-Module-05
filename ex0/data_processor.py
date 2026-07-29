@@ -7,7 +7,7 @@
 #   By: mny-aro- <mny-aro-@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/07/27 23:05:09 by mny-aro-            #+#    #+#            #
-#   Updated: 2026/07/28 02:45:10 by mny-aro-           ###   ########.fr      #
+#   Updated: 2026/07/29 22:09:06 by mny-aro-           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
 
@@ -39,9 +39,14 @@ class DataProcessor(ABC):
 
 class NumericProcessor(DataProcessor):
     def validate(self, data: typing.Any) -> bool:
+        if isinstance(data, bool):
+            return False
         if isinstance(data, list):
-            is_int = all(isinstance(element, (int, float))
-                         for element in data)
+            is_int = all(
+                not isinstance(element, bool)
+                and isinstance(element, (int, float))
+                for element in data
+            )
             return is_int
         elif isinstance(data, (int, float)):
             return True
@@ -50,6 +55,8 @@ class NumericProcessor(DataProcessor):
 
     def ingest(self, data: int | float
                | list[int | float]) -> None:
+        if isinstance(data, bool):
+            raise ValueError("Improper numeric data")
         if not self.validate(data):
             raise ValueError("Improper numeric data")
         if isinstance(data, list):
@@ -112,13 +119,11 @@ class LogProcessor(DataProcessor):
         if isinstance(data, list):
             for item in data:
                 rank = self.count_rank()
-                value = (f"{item['log_level']}:"
-                         f" {item['log_message']}")
+                value = ": ".join(item.values())
                 self.data.append((rank, value))
         elif isinstance(data, dict):
             rank = self.count_rank()
-            value = (f"{data['log_level']}:"
-                     f" {data['log_message']}")
+            value = ": ".join(data.values())
             self.data.append((rank, value))
 
 
@@ -151,7 +156,6 @@ def main() -> None:
         rank, value = numeric.output()
         print(f" Numeric value {rank}: {value}")
 
-
     print("\nTesting Text Processor...")
     print(f" Trying to validate input '42':"
           f" {text.validate(42)}")
@@ -166,7 +170,6 @@ def main() -> None:
     for _ in range(to_extract2):
         rank, value = text.output()
         print(f" Text value {rank}: {value}")
-
 
     print("\nTesting Log Processor...")
     print(f" Trying to validate input 'Hello':"

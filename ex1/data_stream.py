@@ -7,10 +7,9 @@
 #   By: mny-aro- <mny-aro-@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
 #   Created: 2026/07/28 03:02:45 by mny-aro-            #+#    #+#            #
-#   Updated: 2026/07/28 04:32:23 by mny-aro-           ###   ########.fr      #
+#   Updated: 2026/07/29 23:17:37 by mny-aro-           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
-
 
 import typing
 from abc import ABC, abstractmethod
@@ -58,9 +57,14 @@ class NumericProcessor(DataProcessor):
         self._name = "Numeric Processor"
 
     def validate(self, data: typing.Any) -> bool:
+        if isinstance(data, bool):
+            return False
         if isinstance(data, list):
-            is_int = all(isinstance(element, (int, float))
-                         for element in data)
+            is_int = all(
+                not isinstance(element, bool)
+                and isinstance(element, (int, float))
+                for element in data
+            )
             return is_int
         elif isinstance(data, (int, float)):
             return True
@@ -69,6 +73,8 @@ class NumericProcessor(DataProcessor):
 
     def ingest(self, data: int | float
                | list[int | float]) -> None:
+        if isinstance(data, bool):
+            raise ValueError("Improper numeric data")
         if not self.validate(data):
             raise ValueError("Improper numeric data")
         if isinstance(data, list):
@@ -143,14 +149,12 @@ class LogProcessor(DataProcessor):
         if isinstance(data, list):
             for item in data:
                 rank = self.count_rank()
-                value = (f"{item['log_level']}:"
-                         f" {item['log_message']}")
+                value = ": ".join(item.values())
                 self.data.append((rank, value))
                 self._total_processed += 1
         elif isinstance(data, dict):
             rank = self.count_rank()
-            value = (f"{data['log_level']}:"
-                     f" {data['log_message']}")
+            value = ": ".join(data.values())
             self.data.append((rank, value))
             self._total_processed += 1
 
@@ -178,7 +182,7 @@ class DataStream:
                 )
 
     def print_processors_stats(self) -> None:
-        print("== Datastream statistics ==")
+        print("== DataStream statistics ==")
         if not self._processors:
             print("No processor found, no data")
             return
@@ -186,7 +190,7 @@ class DataStream:
             print(
                 f"{proc.name}: total"
                 f" {proc.total_processed} items"
-                f" preocessed, remaining"
+                f" processed, remaining"
                 f" {proc.remaining} on processor"
             )
 
