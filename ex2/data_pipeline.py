@@ -2,15 +2,14 @@
 # ########################################################################### #
 #   shebang: 1                                                                #
 #                                                          :::      ::::::::  #
-#   data_stream.py                                       :+:      :+:    :+:  #
+#   data_pipeline.py                                     :+:      :+:    :+:  #
 #                                                      +:+ +:+         +:+    #
 #   By: mny-aro- <mny-aro-@student.42antananarivo.   +#+  +:+       +#+       #
 #                                                  +#+#+#+#+#+   +#+          #
-#   Created: 2026/07/28 03:02:45 by mny-aro-            #+#    #+#            #
-#   Updated: 2026/07/28 04:32:23 by mny-aro-           ###   ########.fr      #
+#   Created: 2026/07/27 23:05:09 by mny-aro-            #+#    #+#            #
+#   Updated: 2026/07/29 09:29:02 by mny-aro-           ###   ########.fr      #
 #                                                                             #
 # ########################################################################### #
-
 
 import typing
 from abc import ABC, abstractmethod
@@ -155,14 +154,48 @@ class LogProcessor(DataProcessor):
             self._total_processed += 1
 
 
+class ExportPlugin(typing.Protocol):
+    def process_output(
+        self, data: list[tuple[int, str]]
+    ) -> None:
+        ...
+
+
+class CSVExportPlugin:
+    def process_output(
+        self, data: list[tuple[int, str]]
+    ) -> None:
+        values = [value for _, value in data]
+        print("CSV Output:")
+        print(",".join(values))
+
+
+class JSONExportPlugin:
+    def process_output(
+        self, data: list[tuple[int, str]]
+    ) -> None:
+        items: list[str] = []
+        for rank, value in data:
+            items.append(
+                f'"item_{rank}": "{value}"'
+            )
+        json_str = "{" + ", ".join(items) + "}"
+        print("JSON Output:")
+        print(json_str)
+
+
 class DataStream:
     def __init__(self) -> None:
         self._processors: list[DataProcessor] = []
 
-    def register_processor(self, proc: DataProcessor) -> None:
+    def register_processor(
+        self, proc: DataProcessor
+    ) -> None:
         self._processors.append(proc)
 
-    def process_stream(self, stream: list[typing.Any]) -> None:
+    def process_stream(
+        self, stream: list[typing.Any]
+    ) -> None:
         for element in stream:
             processed = False
             for proc in self._processors:
@@ -178,7 +211,7 @@ class DataStream:
                 )
 
     def print_processors_stats(self) -> None:
-        print("== Datastream statistics ==")
+        print("\n== DataStream statistics ==")
         if not self._processors:
             print("No processor found, no data")
             return
@@ -186,21 +219,39 @@ class DataStream:
             print(
                 f"{proc.name}: total"
                 f" {proc.total_processed} items"
-                f" preocessed, remaining"
+                f" processed, remaining"
                 f" {proc.remaining} on processor"
             )
 
+    def output_pipeline(
+        self, nb: int, plugin: ExportPlugin
+    ) -> None:
+        for proc in self._processors:
+            data: list[tuple[int, str]] = []
+            for _ in range(nb):
+                if proc.remaining == 0:
+                    break
+                data.append(proc.output())
+            if data:
+                plugin.process_output(data)
+
 
 def main() -> None:
-    print("=== Code Nexus - Data Stream ===")
-    print("\nInitialize Data Stream...")
+    print("=== Code Nexus - Data Pipeline ===")
+
+    print("\nInitialize Data Stream...\n")
     ds = DataStream()
     ds.print_processors_stats()
-    print("\nRegistering Numeric Processor")
-    np = NumericProcessor()
-    ds.register_processor(np)
 
-    batch: list[typing.Any] = [
+    print("\nRegistering Processors\n")
+    np = NumericProcessor()
+    tp = TextProcessor()
+    lp = LogProcessor()
+    ds.register_processor(np)
+    ds.register_processor(tp)
+    ds.register_processor(lp)
+
+    batch1: list[typing.Any] = [
         "Hello world",
         [3.14, -1, 2.71],
         [
@@ -219,31 +270,49 @@ def main() -> None:
         ["Hi", "five"],
     ]
     print(
-        "\nSend first batch of data on stream:"
-        f" {batch}"
+        "Send first batch of data on stream:"
+        f" {batch1}"
     )
-    ds.process_stream(batch)
-    ds.print_processors_stats()
-    print("\nRegistering other data processors")
-    tp = TextProcessor()
-    lp = LogProcessor()
-    ds.register_processor(tp)
-    ds.register_processor(lp)
-
-    print("Send the same batch again")
-    ds.process_stream(batch)
+    ds.process_stream(batch1)
     ds.print_processors_stats()
 
+    csv_plugin = CSVExportPlugin()
     print(
-        "\nConsume some elements from the"
-        " data processors: Numeric 3,"
-        " Text 2, Log 1"
+        "\nSend 3 processed data from each"
+        " processor to a CSV plugin:"
     )
-    for _ in range(3):
-        np.output()
-    for _ in range(2):
-        tp.output()
-    lp.output()
+    ds.output_pipeline(3, csv_plugin)
+    ds.print_processors_stats()
+
+    batch2: list[typing.Any] = [
+        21,
+        ["I love AI", "LLMs are wonderful",
+         "Stay healthy"],
+        [
+            {
+                "log_level": "ERROR",
+                "log_message": "500 server crash",
+            },
+            {
+                "log_level": "NOTICE",
+                "log_message": (
+                    "Certificate expires in 10 days"
+                ),
+            },
+        ],
+        [32, 42, 64, 84, 128, 168],
+        "World hello",
+    ]
+    print(f"Send another batch of data: {batch2}")
+    ds.process_stream(batch2)
+    ds.print_processors_stats()
+
+    json_plugin = JSONExportPlugin()
+    print(
+        "\nSend 5 processed data from each"
+        " processor to a JSON plugin:"
+    )
+    ds.output_pipeline(5, json_plugin)
     ds.print_processors_stats()
 
 
